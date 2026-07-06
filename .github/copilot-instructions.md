@@ -19,30 +19,32 @@ a time; do not advance until the current phase's exit criteria are demonstrably 
 
 ## Commands
 
-> Two regimes coexist during the migration. **Current (legacy, Phase 0)** commands
-> are Grunt-based; from **Phase 1** they become Vite-based. Keep this table current
-> as phases land.
+> As of **Phase 1 (merged)**, the toolchain is **Vite-based**; the legacy Grunt
+> toolchain has been removed. Commands below are the current (Vite) regime. melonJS
+> v4 is still a vendored global (`public/vendor/melonjs-min.js`) until Phase 2.
 
-| Action | Current (legacy / Phase 0) | Target (Phase 1+) |
-|--------|----------------------------|-------------------|
-| Install / restore deps | `npm ci` (commit lockfile in Phase 0) | `npm ci` |
-| Build | `grunt default` (needs `grunt-cli`; emits `build/clumsy-min.js`) | `vite build` (emits git-ignored `dist/`) |
-| Run / serve locally | `grunt connect` (port 8001) **or** `python3 -m http.server` | `vite dev` |
-| Unit tests | — (none exist) | `vitest` *(future, post-Phase 2)* |
-| End-to-end / smoke | `playwright test` (added in Phase 0) | `playwright test` |
-| Lint | `grunt jshint:beforeConcat` *(currently fails on globals; `grunt lint` task is broken)* | `eslint .` |
-| Format | — | `prettier --check .` |
-| Typecheck | — (no TypeScript) | — |
+| Action | Command |
+|--------|---------|
+| Install / restore deps | `npm ci` (lockfile committed) |
+| Build | `vite build` / `npm run build` (emits git-ignored `dist/`) |
+| Run / serve locally | `vite` / `npm run dev` (dev server, port 5173) |
+| Preview production build | `npm run preview` (serves `dist/` on port 4173) |
+| Unit tests | — (none; `vitest` deferred to post-Phase 2) |
+| End-to-end / smoke | `playwright test` / `npm run test:e2e` (builds + previews the bundle) |
+| Lint | `eslint .` / `npm run lint` |
+| Format | `prettier --check .` / `npm run format` |
+| Typecheck | — (no TypeScript) |
 
-> **Verified during the spike (Node 25):** `npm install` ✅ (35 vulns, 9 critical),
-> `grunt default` ✅ green, headless boot ✅ 0 console errors. There is **no test
-> suite** in the legacy state — the first meaningful test arrives in Phase 0.
+> **Verified (Phase 1, Node 25 local / Node 20 CI):** `npm install` ✅ **0 vulns**
+> (Grunt's 35 vulns closed), `vite build` ✅ green, `eslint .` ✅ 0 errors,
+> `prettier --check .` ✅, Playwright e2e ✅ 5/5 behavioral against the built bundle
+> (golden master enforced on Linux/CI).
 
-CI (`.github/workflows/ci.yml`) runs `install → build → serve → Playwright e2e` on
-**Node 20** for every push and PR. CI is stood up in **Phase 0** (the Testability &
-CI Milestone). **Enforcement is a separate manual step:** until a human turns this
-workflow into a **required status check / branch-protection rule** (GitHub →
-Settings → Branches), CI *runs* on PRs but does **not** *block* merges.
+CI (`.github/workflows/ci.yml`) runs `install → lint → format → build → Playwright
+e2e` on **Node 20** for every push and PR. CI is stood up in **Phase 0** (the
+Testability & CI Milestone). **Enforcement is a separate manual step:** until a
+human turns this workflow into a **required status check / branch-protection rule**
+(GitHub → Settings → Branches), CI *runs* on PRs but does **not** *block* merges.
 
 ## Phase gating (regime-aware; applies to every phase)
 

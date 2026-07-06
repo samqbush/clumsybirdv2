@@ -11,6 +11,9 @@ npm-debug.log
 # project specific ignore
 node_modules/
 
+# Vite build output
+dist/
+
 # Playwright
 /test-results/
 /playwright-report/

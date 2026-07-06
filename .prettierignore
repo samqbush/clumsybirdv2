@@ -1,0 +1,11 @@
+dist/
+public/vendor/
+playwright-report/
+test-results/
+package-lock.json
+*.min.js
+
+# Prose docs are hand-formatted (tables, etc.) — don't let Prettier reflow them.
+*.md
+app.json
+humans.txt
