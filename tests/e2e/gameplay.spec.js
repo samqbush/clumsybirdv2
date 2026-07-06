@@ -149,7 +149,7 @@ test('a spawned pipe pair leaves a passable, on-screen gap (unwinnable-wall regr
   const geo = await page.evaluate(() => {
     const world = window.me.game.world;
     const pipes = [];
-    let hit = null;
+    const hits = [];
     // world-space top/bottom of a body's first collision shape
     const shapeExtent = (c) => {
       const shp = c.body.shapes[0];
@@ -167,17 +167,22 @@ test('a spawned pipe pair leaves a passable, on-screen gap (unwinnable-wall regr
           collide: shapeExtent(c),
         });
       }
-      if (c instanceof window.game.HitEntity) hit = { x: Math.round(c.pos.x), ...shapeExtent(c) };
+      if (c instanceof window.game.HitEntity)
+        hits.push({ x: Math.round(c.pos.x), ...shapeExtent(c) });
     }
-    return { vpH: window.me.game.viewport.height, pipes, hit };
+    return { vpH: window.me.game.viewport.height, pipes, hits };
   });
 
-  // Isolate a single spawned pair (same x). PipeGenerator always spawns exactly
-  // two pipes plus one hit trigger per tick.
+  // Isolate a single spawned pair (same x) and its matching hit trigger.
+  // PipeGenerator spawns exactly two pipes plus one hit per tick, all at the
+  // same posX, so key the pair off a hit's x to keep the gap and hit assertions
+  // aligned to the SAME spawn even when multiple pairs are on-screen (otherwise
+  // an arbitrary pipe pair could be checked against an unrelated hit trigger).
   const byX = {};
   for (const p of geo.pipes) (byX[p.x] = byX[p.x] || []).push(p);
-  const pair = Object.values(byX).find((g) => g.length === 2);
-  expect(pair, 'expected a spawned pipe pair sharing an x').toBeTruthy();
+  const hit = geo.hits.find((h) => byX[h.x] && byX[h.x].length === 2);
+  expect(hit, 'expected a hit trigger aligned to a spawned pipe pair').toBeTruthy();
+  const pair = byX[hit.x];
 
   const topPipe = pair.reduce((a, b) => (a.collide.top < b.collide.top ? a : b));
   const botPipe = pair.reduce((a, b) => (a.collide.top > b.collide.top ? a : b));
@@ -195,9 +200,9 @@ test('a spawned pipe pair leaves a passable, on-screen gap (unwinnable-wall regr
   expect(gapBottom).toBeGreaterThan(0);
 
   // 3) The invisible score trigger sits inside the gap, so a bird flying the gap scores.
-  expect(geo.hit, 'expected a hit trigger').toBeTruthy();
-  expect(geo.hit.top).toBeGreaterThanOrEqual(gapTop);
-  expect(geo.hit.bottom).toBeLessThanOrEqual(gapBottom);
+  expect(hit, 'expected a hit trigger').toBeTruthy();
+  expect(hit.top).toBeGreaterThanOrEqual(gapTop);
+  expect(hit.bottom).toBeLessThanOrEqual(gapBottom);
 
   // 4) Collision extents match the visible sprite for both pipes (no invisible wall):
   //    render bounds and narrow-phase collision-shape extents agree within 1px.
