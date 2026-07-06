@@ -72,7 +72,7 @@ by the *absence* of a harness, which we can add cheaply against the living game.
 **CI is stood up in Phase 0** (the first lit phase / Testability Milestone) —
 `.github/workflows/ci.yml` running lint + build + Playwright e2e on Node 20.
 **Enforcing** that workflow as a **required status check / branch-protection rule**
-on `master` is a **manual human step the agent cannot perform** — see §9. Until a
+on `main` is a **manual human step the agent cannot perform** — see §9. Until a
 human enables it, CI *runs* on PRs but does **not** block merges.
 
 ### Residual-risk register (rungs below L4 / named risks)
@@ -164,8 +164,8 @@ golden-master screenshot matches within tolerance; manual play-test feels identi
 its Verification & Exit Criteria are **executed and recorded**, and you do **not**
 advance until they pass. Phase 0 exits on its established safety-net rung; Phases
 1–3 are **lit** and exit on **green CI on the phase PR**. Report any phase whose
-pass/fail is unknown rather than assuming it passed. Branch per phase off `master`;
-merge to `master` before the next phase (H7).
+pass/fail is unknown rather than assuming it passed. Branch per phase off `main`;
+merge to `main` before the next phase (H7).
 
 ---
 
@@ -242,7 +242,7 @@ zero game behavior.
 **Goal:** Replace the dead Grunt/JSHint toolchain and move first-party code to ES
 modules — **still on melonJS v4**, behavior identical.
 **Regime:** **lit.** **Safety rung:** L4.
-**Prerequisites:** Phase 0 merged to `master`.
+**Prerequisites:** Phase 0 merged to `main`.
 **Duration:** 2–3 sprints.
 
 #### Tasks
@@ -272,7 +272,7 @@ modules — **still on melonJS v4**, behavior identical.
   post-cutover build target = `vite build`. **H2** codemod = manual globals→ESM
   (tree is tiny; no jscodeshift needed) + JSHint→ESLint config; test engine already
   Playwright from P0 — cleared. **H3** runtime pins moved in lockstep (1.5).
-  **H6** none. **H7** off `master`, P0 merged first. **H8** README/commands updated
+  **H6** none. **H7** off `main`, P0 merged first. **H8** README/commands updated
   (1.6).
 
 #### Verification & Exit Criteria
@@ -289,7 +289,7 @@ modules — **still on melonJS v4**, behavior identical.
 **Goal:** Replace vendored melonJS v4 with npm melonjs@17 and rewrite the API glue,
 preserving identical observable behavior.
 **Regime:** **lit.** **Safety rung:** L4 (net from P0 + parity play-test).
-**Prerequisites:** Phase 1 merged to `master`.
+**Prerequisites:** Phase 1 merged to `main`.
 **Duration:** 3–5 sprints.
 
 #### Tasks
@@ -326,7 +326,7 @@ preserving identical observable behavior.
   **H3** `engines`/CI already Node 20 from P1; melonjs is pure JS (no native/base-
   image pin) — cleared. **H5** addressed (2.6). **H1/H4/H6** n/a — no route classes,
   no security shim, removal set = just `js/melonJS-min.js` (grepped: referenced only
-  `index.html`, now via ESM). **H7/H8** off `master`, docs updated.
+  `index.html`, now via ESM). **H7/H8** off `main`, docs updated.
 
 #### Verification & Exit Criteria
 - [ ] App boots on melonjs@17 with **0 console errors** (15 v4 warnings gone) **[CI]**.
@@ -342,7 +342,7 @@ preserving identical observable behavior.
 
 **Goal:** Retire the dead Python-2 Heroku path; deploy via GitHub Actions to Pages.
 **Regime:** **lit.** **Safety rung:** L4.
-**Prerequisites:** Phase 2 merged to `master`.
+**Prerequisites:** Phase 2 merged to `main`.
 **Duration:** 1 sprint.
 
 #### Tasks
@@ -377,11 +377,11 @@ and none are worth doing until a maintainer asks.
 
 ## 7. Execution Governance
 
-- **Trunk is `master`** (confirmed: no `main`; `origin/HEAD → master`). No legacy
-  default-branch split.
-- **Branch per phase**, cut from `master`; open one PR per phase; **merge to
-  `master` before starting the next phase — never stack** (H7). Verify
-  `git log origin/master..HEAD` empty at branch creation.
+- **Trunk is `main`** (confirmed: `origin/HEAD → main`; a stale `master` exists one
+  commit behind — do not use it). No active default-branch split.
+- **Branch per phase**, cut from `main`; open one PR per phase; **merge to
+  `main` before starting the next phase — never stack** (H7). Verify
+  `git log origin/main..HEAD` empty at branch creation.
 - **Regime-aware gate:** Phases 1–3 (lit) advance on **green CI on the PR**; Phase 0
   advances on its established net + "net proven to fail" evidence.
 - **CI Milestone = Phase 0.** Authoring `ci.yml` is done by the agent;
@@ -409,7 +409,7 @@ and none are worth doing until a maintainer asks.
   localStorage (`me.save`). Phase 2 **preserves the key** with a one-time
   read-migration; a reset is an accepted-but-avoided fallback (per-browser,
   ephemeral, no server data). No database, no volumes.
-- **Rollback (per phase):** redeploy the previous phase's `master` commit / Pages
+- **Rollback (per phase):** redeploy the previous phase's `main` commit / Pages
   build. Each phase is a discrete revertible PR.
 - **Transitional-insecure-state register (H6):** **none.** No permit-all shims,
   CSRF toggles, open endpoints, or placeholder secrets are introduced — this is a
@@ -426,7 +426,7 @@ and none are worth doing until a maintainer asks.
 
 - **[MANUAL — agent cannot perform]** After Phase 0's `ci.yml` lands, a repo admin
   must make it an **enforced required status check / branch-protection rule** on
-  `master` (**GitHub → Settings → Branches → Branch protection**). Until then CI
+  `main` (**GitHub → Settings → Branches → Branch protection**). Until then CI
   *runs* on PRs but does **not** block merges.
 - **[MANUAL — agent cannot perform]** Enable **GitHub Pages** in repo settings and
   grant the Actions workflow Pages deploy permission (Phase 3).
