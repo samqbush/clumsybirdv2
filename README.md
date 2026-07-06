@@ -25,7 +25,7 @@ between sessions. Touch a pipe or the ground and the run is over.
 
 ## Running Locally
 
-- Install [Node 24+](http://nodejs.org/download/) (see `.nvmrc`)
+- Install [Node 24+](https://nodejs.org/download/) (see `.nvmrc`)
 - Install the dependencies
 
 ```
@@ -84,8 +84,8 @@ rationale.
 
 Highlights:
 
-- **Zero known vulnerabilities** — the abandoned Grunt toolchain (and its critical
-  advisories) is gone; `npm audit` reports clean.
+- **A smaller vulnerability surface** — the abandoned Grunt toolchain (and its
+  critical advisories) is gone; run `npm audit` to check the current dependency tree.
 - **A behavioral safety net** — Playwright asserts the game boots error-free and the
   title → play → game-over flow, scoring, collision, and high-score persistence all
   work, plus a golden-master screenshot, so refactors can't silently break the game.
