@@ -2,7 +2,6 @@ import { game } from '../game.js';
 
 game.PlayScreen = me.ScreenObject.extend({
   init: function () {
-    me.audio.play('theme', true);
     // lower audio volume on firefox browser
     var vol = me.device.ua.indexOf('Firefox') !== -1 ? 0.3 : 0.5;
     me.audio.setVolume(vol);
@@ -20,7 +19,7 @@ game.PlayScreen = me.ScreenObject.extend({
     game.data.score = 0;
     game.data.steps = 0;
     game.data.start = false;
-    game.data.newHiscore = false;
+    game.data.newHiScore = false;
 
     me.game.world.addChild(new game.BackgroundLayer('bg', 1));
 

@@ -53,7 +53,7 @@ game.GameOverScreen = me.ScreenObject.extend({
     me.game.world.addChild(this.ground1, 11);
     me.game.world.addChild(this.ground2, 11);
 
-    // add the dialog witht he game information
+    // add the dialog with the game information
     if (game.data.newHiScore) {
       var newRect = new me.Sprite(gameOverBG.width / 2, gameOverBG.height / 2, { image: 'new' });
       me.game.world.addChild(newRect, 12);
@@ -75,8 +75,6 @@ game.GameOverScreen = me.ScreenObject.extend({
 
       draw: function (renderer) {
         var stepsText = this.font.measureText(renderer, this.steps);
-        var topStepsText = this.font.measureText(renderer, this.topSteps);
-        var scoreText = this.font.measureText(renderer, this.score);
 
         //steps
         this.font.draw(
