@@ -22,6 +22,13 @@ game.BirdEntity = class BirdEntity extends me.Sprite {
     settings.frameheight = 60;
 
     super(x, y, settings);
+    // Gameplay entities use TOP-LEFT positioning: all the pipe/ground/bird
+    // placement math is inherited unchanged from the melonJS v4 original, where
+    // me.Entity positioned by its top-left corner. me.Sprite defaults to a
+    // CENTER anchor (0.5, 0.5); leaving it centered shifts every entity up-left
+    // by half its size (832px for the 1664px-tall pipes), which pushed the pipe
+    // gap off the top of the screen and made the game unwinnable.
+    this.anchorPoint.set(0, 0);
     this.body = new me.Body(this);
     this.body.addShape(new me.Ellipse(5, 5, 71, 51));
     this.body.gravityScale = 0;
@@ -159,6 +166,7 @@ game.PipeEntity = class PipeEntity extends me.Sprite {
 
     super(x, y, settings);
     this.image = image;
+    this.anchorPoint.set(0, 0);
     this.body = new me.Body(this);
     this.body.addShape(new me.Rect(0, 0, settings.width, settings.height));
     this.body.gravityScale = 0;
@@ -201,7 +209,14 @@ game.PipeGenerator = class PipeGenerator extends me.Renderable {
       const pipe2 = me.pool.pull('pipe', this.posX, posY2);
       const hitPos = posY - 100;
       const hit = me.pool.pull('hit', this.posX, hitPos);
-      pipe1.currentTransform.scaleY(-1);
+      // Flip the bottom pipe so its cap points up. me.Sprite.flipY() reflects
+      // around the sprite center at draw time (render-only), so with the
+      // top-left anchor the pipe stays in place. currentTransform.scaleY(-1)
+      // would instead reflect around the top edge and throw the pipe off-screen.
+      // PipeEntity is pooled, so set the flip explicitly on BOTH pipes to keep a
+      // recycled (previously-flipped) instance from carrying stale flip state.
+      pipe1.flipY(true);
+      pipe2.flipY(false);
       me.game.world.addChild(pipe1, 10);
       me.game.world.addChild(pipe2, 10);
       me.game.world.addChild(hit, 11);
@@ -222,6 +237,7 @@ game.HitEntity = class HitEntity extends me.Sprite {
 
     super(x, y, settings);
     this.image = image;
+    this.anchorPoint.set(0, 0);
     this.body = new me.Body(this);
     this.body.addShape(new me.Rect(0, 0, settings.width - 30, settings.height - 30));
     this.body.gravityScale = 0;
@@ -254,6 +270,7 @@ game.Ground = class Ground extends me.Sprite {
     settings.framewidth = 900;
     settings.frameheight = 96;
     super(x, y, settings);
+    this.anchorPoint.set(0, 0);
     this.body = new me.Body(this);
     this.body.addShape(new me.Rect(0, 0, settings.width, settings.height));
     this.body.gravityScale = 0;

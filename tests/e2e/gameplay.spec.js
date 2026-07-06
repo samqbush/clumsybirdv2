@@ -115,3 +115,102 @@ test('hi-score persists in localStorage across a full reload', async ({ page }) 
   });
   expect(restored).toBe(42);
 });
+
+// Regression: the melonJS v4 -> v19 rewrite turned the gameplay entities into
+// me.Sprite subclasses, which default to a CENTER anchorPoint (0.5, 0.5). The
+// pipe/ground/bird placement math is inherited unchanged from v4, where
+// me.Entity positioned by its TOP-LEFT corner, so centering shifted every
+// entity up by half its size (832px for the 1664px pipes). That pushed the pipe
+// gap entirely off the top of the screen, leaving the bottom pipe covering the
+// whole play area -> a solid wall the bird could never pass (the game died
+// "no matter what" after ~10-20s). The fix restores top-left anchors + a
+// render-only flip on the bottom pipe. This test asserts a real spawned pipe
+// pair leaves a passable, on-screen gap that the invisible score trigger sits
+// inside, and that collision extents match the visible sprite (no invisible
+// wall). It would fail before the fix (gap off-screen) and pass after.
+test('a spawned pipe pair leaves a passable, on-screen gap (unwinnable-wall regression)', async ({
+  page,
+}) => {
+  await startPlaying(page);
+
+  // Wait for the PipeGenerator to spawn a real pipe pair.
+  await page.waitForFunction(
+    () => {
+      let n = 0;
+      for (const c of window.me.game.world.children) {
+        if (c instanceof window.game.PipeEntity) n++;
+      }
+      return n >= 2;
+    },
+    undefined,
+    { timeout: 10000 },
+  );
+
+  const geo = await page.evaluate(() => {
+    const world = window.me.game.world;
+    const pipes = [];
+    const hits = [];
+    // world-space top/bottom of a body's first collision shape
+    const shapeExtent = (c) => {
+      const shp = c.body.shapes[0];
+      const sb = shp.getBounds();
+      const top = c.pos.y + shp.pos.y + sb.y;
+      return { top, bottom: top + sb.height };
+    };
+    for (const c of world.children) {
+      if (c instanceof window.game.PipeEntity) {
+        const b = c.getBounds();
+        pipes.push({
+          x: Math.round(c.pos.x),
+          flipY: !!(c._flip && c._flip.y),
+          render: { top: b.y, bottom: b.y + b.height },
+          collide: shapeExtent(c),
+        });
+      }
+      if (c instanceof window.game.HitEntity)
+        hits.push({ x: Math.round(c.pos.x), ...shapeExtent(c) });
+    }
+    return { vpH: window.me.game.viewport.height, pipes, hits };
+  });
+
+  // Isolate a single spawned pair (same x) and its matching hit trigger.
+  // PipeGenerator spawns exactly two pipes plus one hit per tick, all at the
+  // same posX, so key the pair off a hit's x to keep the gap and hit assertions
+  // aligned to the SAME spawn even when multiple pairs are on-screen (otherwise
+  // an arbitrary pipe pair could be checked against an unrelated hit trigger).
+  const byX = {};
+  for (const p of geo.pipes) (byX[p.x] = byX[p.x] || []).push(p);
+  const hit = geo.hits.find((h) => byX[h.x] && byX[h.x].length === 2);
+  expect(hit, 'expected a hit trigger aligned to a spawned pipe pair').toBeTruthy();
+  const pair = byX[hit.x];
+
+  const topPipe = pair.reduce((a, b) => (a.collide.top < b.collide.top ? a : b));
+  const botPipe = pair.reduce((a, b) => (a.collide.top > b.collide.top ? a : b));
+
+  // The passable gap: below the upper pipe's bottom edge, above the lower pipe's top edge.
+  const gapTop = topPipe.collide.bottom;
+  const gapBottom = botPipe.collide.top;
+  const gapHeight = gapBottom - gapTop;
+
+  // 1) The pipes actually leave a gap (before the fix the "gap" was negative/off-screen).
+  expect(gapHeight).toBeGreaterThan(120);
+
+  // 2) The gap overlaps the visible viewport (0..vpH) - not off the top of the screen.
+  expect(gapTop).toBeLessThan(geo.vpH);
+  expect(gapBottom).toBeGreaterThan(0);
+
+  // 3) The invisible score trigger sits inside the gap, so a bird flying the gap scores.
+  expect(hit, 'expected a hit trigger').toBeTruthy();
+  expect(hit.top).toBeGreaterThanOrEqual(gapTop);
+  expect(hit.bottom).toBeLessThanOrEqual(gapBottom);
+
+  // 4) Collision extents match the visible sprite for both pipes (no invisible wall):
+  //    render bounds and narrow-phase collision-shape extents agree within 1px.
+  for (const p of pair) {
+    expect(Math.abs(p.render.top - p.collide.top)).toBeLessThanOrEqual(1);
+    expect(Math.abs(p.render.bottom - p.collide.bottom)).toBeLessThanOrEqual(1);
+  }
+
+  // 5) Exactly one pipe of the pair is flipped (the bottom one, cap pointing up).
+  expect(pair.filter((p) => p.flipY).length).toBe(1);
+});
