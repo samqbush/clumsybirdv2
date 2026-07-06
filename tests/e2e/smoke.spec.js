@@ -1,5 +1,5 @@
-const { test, expect } = require('@playwright/test');
-const { gotoGameAndWaitForMenu } = require('./helpers');
+import { test, expect } from '@playwright/test';
+import { gotoGameAndWaitForMenu } from './helpers.js';
 
 // Boot smoke test + golden-master screenshot of the title screen.
 // Behavioral seams: game boots with 0 console errors and renders a stable title.
@@ -23,7 +23,9 @@ test('boots with zero console errors and reaches the title screen', async ({ pag
   expect(errors, `Unexpected console/page errors:\n${errors.join('\n')}`).toEqual([]);
 });
 
-test('title screen matches golden master (stable region above the scrolling ground)', async ({ page }) => {
+test('title screen matches golden master (stable region above the scrolling ground)', async ({
+  page,
+}) => {
   // The golden master is a committed Linux fixture captured in the same
   // Playwright container CI uses. Skip elsewhere (e.g. local macOS) to avoid a
   // false failure from a missing per-OS snapshot; CI (Linux) enforces it.

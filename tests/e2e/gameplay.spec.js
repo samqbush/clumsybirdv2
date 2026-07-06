@@ -1,5 +1,5 @@
-const { test, expect } = require('@playwright/test');
-const { gotoGameAndWaitForMenu, isState } = require('./helpers');
+import { test, expect } from '@playwright/test';
+import { gotoGameAndWaitForMenu, isState } from './helpers.js';
 
 // Behavioral seams that must survive the later melonJS v4 -> v17 rewrite:
 //   title -> play -> gameover state flow, score increments on pipe pass,
@@ -14,11 +14,9 @@ test.use({ viewport: { width: 1000, height: 700 } });
 async function startPlaying(page) {
   await gotoGameAndWaitForMenu(page);
   await page.keyboard.press('Space');
-  await page.waitForFunction(
-    () => window.me.state.isCurrent(window.me.state.PLAY),
-    undefined,
-    { timeout: 10000 }
-  );
+  await page.waitForFunction(() => window.me.state.isCurrent(window.me.state.PLAY), undefined, {
+    timeout: 10000,
+  });
   await page.waitForFunction(() => window.game.data.start === true, undefined, {
     timeout: 10000,
   });
@@ -30,9 +28,7 @@ test('SPACE on the title screen transitions MENU -> PLAY', async ({ page }) => {
 
   await page.keyboard.press('Space');
 
-  await expect
-    .poll(() => isState(page, 'PLAY'), { timeout: 10000 })
-    .toBe(true);
+  await expect.poll(() => isState(page, 'PLAY'), { timeout: 10000 }).toBe(true);
 });
 
 test('score (steps) increments when the bird passes a pipe hit-box', async ({ page }) => {
@@ -65,9 +61,7 @@ test('collision ends the run: PLAY -> GAME_OVER without flapping', async ({ page
 
   // Do not flap: the bird falls under gravity, collides with the ground (real
   // collision path), plays the end animation, then transitions to GAME_OVER.
-  await expect
-    .poll(() => isState(page, 'GAME_OVER'), { timeout: 20000 })
-    .toBe(true);
+  await expect.poll(() => isState(page, 'GAME_OVER'), { timeout: 20000 }).toBe(true);
 });
 
 test('hi-score persists in localStorage across a full reload', async ({ page }) => {
@@ -84,8 +78,8 @@ test('hi-score persists in localStorage across a full reload', async ({ page }) 
   // Prove it actually reached localStorage (not just in-memory state).
   const inStorage = await page.evaluate(() =>
     Object.keys(window.localStorage).some((k) =>
-      String(window.localStorage.getItem(k)).includes('42')
-    )
+      String(window.localStorage.getItem(k)).includes('42'),
+    ),
   );
   expect(inStorage).toBe(true);
 

@@ -29,10 +29,16 @@ jobs:
       - name: Install dependencies (from lockfile)
         run: npm ci
 
-      - name: Build (legacy Grunt toolchain)
+      - name: Lint (ESLint)
+        run: npm run lint
+
+      - name: Check formatting (Prettier)
+        run: npm run format
+
+      - name: Build (Vite)
         run: npm run build
 
-      - name: Run Playwright e2e (Playwright starts the static server)
+      - name: Run Playwright e2e (Playwright builds + previews the bundle)
         run: npm run test:e2e
 
       - name: Upload Playwright report

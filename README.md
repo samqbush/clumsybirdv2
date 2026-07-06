@@ -11,20 +11,30 @@ Play online at http://ellisonleao.github.io/clumsy-bird/
 
 ## Running Locally
 
-- Install [Node](http://nodejs.org/download/) and [Grunt](http://gruntjs.com/)
+- Install [Node 20+](http://nodejs.org/download/) (see `.nvmrc`)
 - Install the dependencies
 
 ```
 npm install
 ```
 
-Then just type on your shell:
+Start the Vite dev server (hot reload):
 
 ```
-grunt connect
+npm run dev
 ```
 
-Open your browser at `http://localhost:8001/`
+Open your browser at the URL Vite prints (default `http://localhost:5173/`).
+
+Other useful scripts:
+
+```
+npm run build      # production build to dist/
+npm run preview    # serve the production build on http://127.0.0.1:4173/
+npm run lint       # ESLint
+npm run format     # Prettier check
+npm run test:e2e   # Playwright end-to-end tests
+```
 
 ## Making your customization
 

@@ -82,7 +82,7 @@ human enables it, CI *runs* on PRs but does **not** block merges.
 | Golden-master is self-frozen | Pins consistency, not first-boot correctness | Human play-test at each phase; captured against known-good v4 build |
 | Tween/physics timing not asserted exactly | A subtly different feel could pass e2e | Phase 2 parity play-test + frame-sampled screenshots |
 | Audio playback not e2e-asserted | Muted/broken audio could pass | Manual smoke item in each phase checklist |
-| 35 npm vulns in legacy toolchain | Exposure while Grunt remains | Fully closed in Phase 1 (Grunt removed) |
+| 35 npm vulns in legacy toolchain | Exposure while Grunt remains | ✅ **Closed in Phase 1** — Grunt removed; `npm audit` reports **0 vulnerabilities** |
 
 ## 4. Target Architecture
 
@@ -275,12 +275,41 @@ modules — **still on melonJS v4**, behavior identical.
   **H6** none. **H7** off `main`, P0 merged first. **H8** README/commands updated
   (1.6).
 
-#### Verification & Exit Criteria
-- [ ] `vite build` green on Node 20; `dist/` produced **[green CI]**.
-- [ ] `eslint` green (globals resolved) **[green CI]**.
-- [ ] Playwright e2e + golden master **still green — behavior unchanged** (parity).
-- [ ] No `grunt`/`jshint` refs remain (`grep` clean); `build/clumsy-min.js` gone.
-- [ ] README/commands updated in the same PR.
+#### Verification & Exit Criteria — ✅ MET 2026-07-06 (pending CI confirmation on PR)
+- [x] `vite build` green; `dist/` produced **[verified]** — Vite 6.4.3, 9 modules
+      transformed, `dist/assets/index-*.js` + copied `dist/data/**` +
+      `dist/vendor/melonjs-min.js`.
+- [x] `eslint .` green (globals resolved) **[verified]** — 0 errors (11 benign
+      `no-unused-vars` warnings on self-starting tweens / unused callback params).
+- [x] `prettier --check .` green **[verified]** — first-party code formatted; prose
+      docs `.prettierignore`d to avoid table reflow.
+- [x] Playwright e2e green against the **built bundle** (`vite preview`) — 5/5
+      behavioral (0 console errors incl. no asset 404s, MENU→PLAY, score++,
+      collision→GAME_OVER, hi-score localStorage round-trip). Golden master is a
+      Linux-only fixture, **skipped on macOS / enforced on CI**. Asset serving
+      confirmed by curl: `/`, `/vendor/melonjs-min.js`, `/data/css/gamefont.woff`,
+      `/data/img/{bg,logo}.png`, `/data/bgm/theme.ogg` all **200**.
+- [x] No `grunt`/`jshint` refs remain in code/config (`grep` clean); `Gruntfile.js`,
+      `.jshintrc`, `build/clumsy-min.js` removed. **0 npm vulnerabilities** (Grunt's
+      35 closed). Remaining textual mentions are historical prose in plan/architecture
+      docs + explanatory code comments only.
+- [x] README run instructions + `.github/copilot-instructions.md` command table
+      updated in the same PR (H8).
+- [ ] Green CI on the Phase 1 PR — authoritative signal (golden master runs Linux).
+
+**Implementation notes (as-built):**
+- melonJS v4 kept as a classic `<script src="/vendor/melonjs-min.js">` *before* the
+  deferred Vite entry module (`js/main.js`) — `me`/`onReady` remain window globals.
+- `game` is now an ESM singleton (`js/game.js` `export const game`); modules import
+  and attach onto it in the legacy concat order via `js/main.js`. `js/main.js`
+  re-publishes `window.game` so the Phase 0 net keeps observing it.
+- The shared `BackgroundLayer` (was a concat-scoped `var` in `HUD.js`) is now
+  `game.BackgroundLayer` — the one real concat→ESM scoping hazard, fixed.
+- Runtime-referenced assets moved to `public/data/**` (+ vendored engine to
+  `public/vendor/`) so Vite copies them verbatim to `dist/`; CSS `@font-face` +
+  favicon paths switched to root-absolute `/data/...`. `base` left default `/`
+  (Pages base path deferred to Phase 3).
+- `"type": "module"` added → Playwright config + e2e specs converted to ESM.
 
 ---
 

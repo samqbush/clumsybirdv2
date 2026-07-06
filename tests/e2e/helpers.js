@@ -18,16 +18,13 @@ async function gotoGameAndWaitForMenu(page) {
       typeof window.me.state.isCurrent === 'function' &&
       window.me.state.isCurrent(window.me.state.MENU),
     undefined,
-    { timeout: MENU_TIMEOUT }
+    { timeout: MENU_TIMEOUT },
   );
 }
 
 /** Read whether a given melonJS state id is current. */
 function isState(page, stateName) {
-  return page.evaluate(
-    (name) => window.me.state.isCurrent(window.me.state[name]),
-    stateName
-  );
+  return page.evaluate((name) => window.me.state.isCurrent(window.me.state[name]), stateName);
 }
 
-module.exports = { gotoGameAndWaitForMenu, isState, MENU_TIMEOUT };
+export { gotoGameAndWaitForMenu, isState, MENU_TIMEOUT };
