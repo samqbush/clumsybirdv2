@@ -202,20 +202,38 @@ zero game behavior.
   antialiasing. Hi-score/localStorage assertion included.
 - **H1** grepped: dead-artifact removal is *not* in this phase (additive only) —
   cleared. **H3** CI runner pinned Node 20 (matches future run-runtime) — cleared.
-  **H6** no insecure shim introduced — cleared. **H7** branch off `master`, trunk
-  confirmed `master` (no `main`) — cleared. **H8** baseline recorded in plan — n/a
-  topology unchanged.
+  **H6** no insecure shim introduced — cleared. **H7** branch off `main`
+  (**corrected**: actual trunk is `main`, one commit ahead of `master` and the only
+  branch holding this plan — see §9) — cleared. **H8** baseline recorded in plan —
+  n/a topology unchanged.
 
-#### Verification & Exit Criteria (Definition of Done)
-- [ ] `npm ci` installs from committed lockfile **[runnable]**.
-- [ ] `grunt default` builds green on Node 20 **[runnable]**.
-- [ ] Playwright e2e green: 0 console errors + state-flow + score + collision +
-      hi-score assertions pass **[runnable / green CI]**.
-- [ ] Golden-master screenshot committed and matched.
-- [ ] Net proven to fail (0.5 recorded: mutation → red → revert).
-- [ ] **No game behavior, dependency, or logic changed** — purely additive.
+#### Verification & Exit Criteria (Definition of Done) — ✅ MET 2026-07-06
+- [x] `npm ci` installs from committed lockfile **[runnable]** — verified Node 20
+      Linux (Docker) and locally.
+- [x] `grunt default` builds green on Node 20 **[runnable]** — required adding
+      `grunt-cli` devDep (binary was absent); output `build/clumsy-min.js` is
+      **byte-identical** to the committed artifact (md5 `b70aa635…`), proving the
+      freeze held.
+- [x] Playwright e2e green: 0 console errors + state-flow + score + collision +
+      hi-score assertions pass **[green CI]** — 6/6 in the Playwright Linux
+      container; behavioral 4/4 stable across 6× repeat locally.
+- [x] Golden-master screenshot committed and matched — Linux fixture
+      `tests/e2e/smoke.spec.js-snapshots/title-screen-chromium-linux.png`, clipped
+      to the static region above the scrolling ground; captured in the same
+      container CI runs in.
+- [x] Net proven to fail (0.5 recorded): score `steps++` disabled → score test
+      **red**; `collided = true` → `false` → collision test **red**; both reverted,
+      full suite green again.
+- [x] **No game behavior, dependency, or logic changed** — purely additive
+      (`js/` untouched; only new dev deps, scripts, tests, CI, lockfile).
 - [ ] CI workflow runs on the PR. *(Making it a **required check** is a manual
       human step — see §9; not a done task here.)*
+
+**Baseline recorded (known-good):** Node 20.20.2 (CI) / built + validated on Node
+25.8.2 locally; npm 11.x; `@playwright/test` 1.61.1 (Chromium), pinned exact; CI in
+`mcr.microsoft.com/playwright:v1.61.1-noble`. Build artifact md5
+`b70aa635d97923d76c2ea94002708e94`. Golden image:
+`tests/e2e/smoke.spec.js-snapshots/title-screen-chromium-linux.png`.
 
 ---
 
