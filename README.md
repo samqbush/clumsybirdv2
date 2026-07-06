@@ -5,9 +5,7 @@ A MelonJS made "Flappy Bird" clone.
 
 ![](http://i.imgur.com/Slbvt65.png)
 
-Play online at http://ellisonleao.github.io/clumsy-bird/
-
-[![Deploy](https://www.herokucdn.com/deploy/button.png)](https://heroku.com/deploy?template=https://github.com/ellisonleao/clumsy-bird/tree/gh-pages)
+Play online at https://samqbush.github.io/clumsybirdv2/
 
 ## Running Locally
 
@@ -33,8 +31,22 @@ npm run build      # production build to dist/
 npm run preview    # serve the production build on http://127.0.0.1:4173/
 npm run lint       # ESLint
 npm run format     # Prettier check
-npm run test:e2e   # Playwright end-to-end tests
+npm run test:e2e   # Playwright end-to-end tests (built bundle, served at /)
+npm run test:e2e:subpath  # Playwright smoke of the built bundle under the Pages sub-path
 ```
+
+## Deployment
+
+The game is a static bundle hosted on **GitHub Pages**. Every push to `main`
+triggers [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml), which
+runs the Playwright end-to-end net and the sub-path smoke against the built
+bundle, then publishes `dist/` to Pages via GitHub Actions. There is no server
+runtime (the old Python-2 Heroku path has been removed).
+
+`vite.config.js` sets `base: './'` so the build works under the Pages project
+sub-path (`/clumsybirdv2/`) without hardcoding the repo name.
+
+> One-time manual setup: repo **Settings → Pages → Source = GitHub Actions**.
 
 ## Making your customization
 

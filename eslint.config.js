@@ -28,7 +28,7 @@ export default [
   // Tooling / test config: Node ESM. Playwright specs also contain
   // page.evaluate callbacks that run in the browser, so allow browser globals.
   {
-    files: ['*.config.js', 'eslint.config.js', 'tests/**/*.js'],
+    files: ['*.config.js', 'eslint.config.js', 'tests/**/*.js', 'tests/**/*.mjs'],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'module',

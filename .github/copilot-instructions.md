@@ -33,7 +33,9 @@ a time; do not advance until the current phase's exit criteria are demonstrably 
 | Run / serve locally | `vite` / `npm run dev` (dev server, port 5173) |
 | Preview production build | `npm run preview` (serves `dist/` on port 4173) |
 | Unit tests | — (none; `vitest` deferred to post-Phase 2) |
-| End-to-end / smoke | `playwright test` / `npm run test:e2e` (builds + previews the bundle) |
+| End-to-end / smoke | `playwright test` / `npm run test:e2e` (builds + previews the bundle at `/`) |
+| Sub-path deploy smoke | `npm run test:e2e:subpath` (serves built `dist/` under `/clumsybirdv2/`; Phase 3) |
+| Deploy | push to `main` → `.github/workflows/deploy.yml` builds + gates on e2e, publishes `dist/` to **GitHub Pages** |
 | Lint | `eslint .` / `npm run lint` |
 | Format | `prettier --check .` / `npm run format` |
 | Typecheck | — (no TypeScript) |

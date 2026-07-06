@@ -4,6 +4,7 @@
 // the same order the legacy build used (game -> entities -> HUD -> title -> play
 // -> gameover).
 import { me } from './melon.js';
+import '../index.css';
 import { game } from './game.js';
 import './entities/entities.js';
 import './entities/HUD.js';

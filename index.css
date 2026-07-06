@@ -42,12 +42,12 @@ body {
 
 @font-face {
   font-family: 'gamefont';
-  src: url('/data/css/gamefont.eot');
+  src: url('./fonts/gamefont.eot');
   src:
-    url('/data/css/gamefont.eot?#iefix') format('embedded-opentype'),
-    url('/data/css/gamefont.woff') format('woff'),
-    url('/data/css/gamefont.ttf') format('truetype'),
-    url('/data/css/gamefont.svg#gamefont') format('svg');
+    url('./fonts/gamefont.eot?#iefix') format('embedded-opentype'),
+    url('./fonts/gamefont.woff') format('woff'),
+    url('./fonts/gamefont.ttf') format('truetype'),
+    url('./fonts/gamefont.svg#gamefont') format('svg');
   font-weight: normal;
   font-style: normal;
 }

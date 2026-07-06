@@ -34,7 +34,8 @@
     "lint": "eslint .",
     "format": "prettier --check .",
     "format:fix": "prettier --write .",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:e2e:subpath": "vite build && playwright test --config playwright.subpath.config.js"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",

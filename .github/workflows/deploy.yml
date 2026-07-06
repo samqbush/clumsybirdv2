@@ -1,0 +1,77 @@
+name: Deploy to GitHub Pages
+
+# Phase 3: publish the static Vite build to GitHub Pages. Auto-deploys on every
+# push to main, gated by the Playwright e2e net against the BUILT bundle (root)
+# plus the sub-path smoke that proves assets resolve under /clumsybirdv2/.
+# Prerequisite (manual, one-time): repo Settings -> Pages -> Source = GitHub Actions.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Least-privilege token for the Pages OIDC deploy.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One live deploy at a time; don't cancel an in-flight publish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    # Same Playwright image CI uses so the e2e gate matches the golden-master
+    # environment. Keep the tag in lockstep with @playwright/test in package.json.
+    container: mcr.microsoft.com/playwright:v1.61.1-noble
+    env:
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+    steps:
+      - uses: actions/checkout@v4
+
+      # melonjs@19 requires Node >=24; pin over the container default.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install dependencies (from lockfile)
+        run: npm ci
+
+      # Gate 1: behavioral net + golden master against the built bundle (root).
+      - name: Run Playwright e2e
+        run: npm run test:e2e
+
+      # Gate 2: sub-path smoke — proves the relative-base build loads every asset
+      # under the Pages project sub-path (/clumsybirdv2/). Also rebuilds dist/,
+      # which becomes the validated artifact uploaded below.
+      - name: Run sub-path deployment smoke
+        run: npm run test:e2e:subpath
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
