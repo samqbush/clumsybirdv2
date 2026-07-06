@@ -83,7 +83,7 @@ human enables it, CI *runs* on PRs but does **not** block merges.
 | Tween/physics timing not asserted exactly | A subtly different feel could pass e2e | Phase 2 parity play-test + frame-sampled screenshots |
 | Audio playback not e2e-asserted | Muted/broken audio could pass | Manual smoke item in each phase checklist |
 | 35 npm vulns in legacy toolchain | Exposure while Grunt remains | ✅ **Closed in Phase 1** — Grunt removed; `npm audit` reports **0 vulnerabilities** |
-| `me.Entity` deprecation (Phase 2) | 4 entities still extend the deprecated `me.Entity`, emitting one one-time `console.warn` (not an error) | ⏭️ **Deferred** — migrating to `me.Sprite`+`me.Body` is a large, physics-touching change; the golden master + 5 e2e behavioral tests are green, so it is a post-Phase-2 clean-up item |
+| `me.Entity` deprecation (Phase 2) | 4 entities still extend the deprecated `me.Entity`, emitting one one-time `console.warn` (not an error) | ✅ **Closed in Phase 4** — `BirdEntity`/`PipeEntity`/`HitEntity`/`Ground` migrated to `me.Sprite` + manually-attached `me.Body`; boot into PLAY (all 4 entity types constructed) verified **0 deprecation warnings / 0 console errors**; 5 e2e behavioral specs green (incl. real bird↔ground quadtree collision) |
 | Golden master re-baselined at v19 (Phase 2) | New snapshot pins v19 rendering, not v4 | Justified: a 15-major engine upgrade changes the renderer; re-captured in the CI container and reviewed; behavior tests independently green |
 | Pages sub-path breaks asset loading (Phase 3) | Relative `base: './'` + `public/` fonts could 404 under `/clumsybirdv2/` | ✅ **Closed in Phase 3** — fonts moved into the Vite asset graph (rebased relative), CSS de-inlined, and an automated sub-path smoke (`test:e2e:subpath`) asserts 0 failed requests + font load + trailing-slash redirect against the built bundle |
 
@@ -372,6 +372,7 @@ preserving identical observable behavior.
 - [x] App boots on melonjs@19 with **0 console errors** (v4 `textAlign` warnings gone).
       *One* residual: a single one-time `me.Entity` deprecation **warning** (not an
       error) — see residual register. Smoke test (errors-only gate) passes.
+      **(Residual closed in Phase 4.)**
 - [x] Playwright e2e green: MENU→PLAY→GAME_OVER flow + score + collision→game-over +
       hi-score persistence — **5/5 behavioral** locally; golden master green in the
       CI container (`playwright:v1.61.1-noble`).
@@ -440,6 +441,47 @@ preserving identical observable behavior.
 - [x] `Procfile` + `app.json` + Heroku button removed; README reflects Pages/Vite.
 - [ ] `deploy.yml` publishes `dist/` to Pages; live URL loads with 0 console errors
   (**manual** — verify after enabling Pages + first deploy).
+
+---
+
+### Phase 4: Retire deprecated `me.Entity` → `me.Sprite` + `me.Body` (T-shirt: S) — ✅ CODE COMPLETE 2026-07-06 (pending green CI on PR + human parity play-test)
+
+**Goal:** Close the Phase 2 residual — migrate the 4 entities off the deprecated
+`me.Entity` to the supported `me.Sprite` + manually-attached `me.Body` pattern,
+eliminating the one-time boot deprecation `console.warn`.
+**Regime:** **lit.** **Safety rung:** L4. **Prerequisites:** Phase 3 merged to `main`.
+
+#### Tasks (as built)
+| ID | Task | Status |
+|----|------|--------|
+| 4.1 | `BirdEntity` → `me.Sprite`+`me.Body` (spike-first: custom ellipse shape, animations, transforms, tweens, `onCollision`) | ✅ |
+| 4.2 | `PipeEntity`, `HitEntity`, `Ground` → `me.Sprite`+`me.Body` | ✅ |
+| 4.3 | Fix external `pipe1.renderable.currentTransform` → `pipe1.currentTransform` in `PipeGenerator` | ✅ |
+| 4.4 | Update `entities.js` header comment to the Sprite+Body pattern | ✅ |
+
+#### Implementation notes (as built)
+- The Sprite **is** the renderable, so `this.renderable.*` (animations,
+  `currentTransform`, `alpha`, `width`) became `this.*`. Bodies are built **in the
+  constructor before `me.game.world.addChild`** (which registers the body in the
+  collision quadtree — verified via the real bird↔ground collision e2e).
+- **No `this.body.update(dt)`** added: manual movement + `updateBounds()` +
+  `super.update(dt)` only (per review — the world adapter drives bodies).
+- **`framewidth`/`frameheight` set explicitly** (Sprite does not default them from
+  `width`/`height` the way `me.Entity` did) so the bird spritesheet frames animate.
+- **Anchor untouched** (Sprite default `{0.5,0.5}` reproduces Entity's rendered
+  center); collision shapes copied verbatim (bird `me.Ellipse(5,5,71,51)`, hit
+  `me.Rect(0,0,w-30,h-30)`). No command/topology change ⇒ README/CUSTOMIZING/
+  copilot-instructions command table untouched (H8 n/a).
+
+#### Verification & Exit Criteria
+- [x] `eslint .` ✅ 0 errors, `prettier --check .` ✅, `vite build` ✅.
+- [x] `playwright test` ✅ **5/5 behavioral** (incl. real bird↔ground quadtree
+  collision → GAME_OVER, and `onCollision` score path).
+- [x] Boot into PLAY with all 4 entity types constructed: **0 `me.Entity`
+  deprecation warnings, 0 console errors** (the point of the phase).
+- [ ] Green CI on the Phase 4 PR — authoritative signal (golden master runs Linux).
+- [ ] Human parity play-test (flap arc / gravity / collision vibrate / score / lose
+  drop-tween feel) — **manual**.
 
 ---
 

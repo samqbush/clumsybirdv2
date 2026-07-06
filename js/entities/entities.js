@@ -1,33 +1,38 @@
 import { me } from '../melon.js';
 import { game } from '../game.js';
 
-// v19: legacy `me.X.extend({...})` + `this._super(...)` is gone. Entities are ES6
-// classes extending me.Entity (still provided, auto-creates `this.body`). Movement
-// stays MANUAL (mutating `this.pos`) exactly as the v4 original; bodies exist only
-// for automatic collision detection, so gravityScale is 0 and body velocity is left
-// at zero to keep the world physics solver from moving anything. Collision fires via
-// the legacy `onCollision(response, other)` hook the v19 world still dispatches;
-// returning false opts out of physical resolution (we resolve by game logic).
+// Entities are ES6 classes extending me.Sprite with a manually-attached me.Body
+// (the supported v19 pattern; me.Entity is deprecated). The Sprite IS the renderable,
+// so its animation/transform/alpha/size are accessed directly on `this` (not via a
+// `this.renderable` child). Each constructor builds its body before the instance is
+// added to me.game.world, which registers the body in the collision quadtree.
+// Movement stays MANUAL (mutating `this.pos`) exactly as the v4 original; bodies exist
+// only for collision detection, so gravityScale is 0 and body velocity is left at zero
+// to keep the world physics solver from moving anything. Collision fires via the
+// `onCollision(response, other)` hook the v19 world dispatches to any renderable with a
+// body; returning false opts out of physical resolution (we resolve by game logic).
 
-game.BirdEntity = class BirdEntity extends me.Entity {
+game.BirdEntity = class BirdEntity extends me.Sprite {
   constructor(x, y) {
     const settings = {};
     settings.image = 'clumsy';
     settings.width = 85;
     settings.height = 60;
+    settings.framewidth = 85;
+    settings.frameheight = 60;
 
     super(x, y, settings);
-    this.alwaysUpdate = true;
+    this.body = new me.Body(this);
+    this.body.addShape(new me.Ellipse(5, 5, 71, 51));
     this.body.gravityScale = 0;
     this.body.collisionType = me.collision.types.PLAYER_OBJECT;
     this.body.setCollisionMask(me.collision.types.ALL_OBJECT);
+    this.alwaysUpdate = true;
     this.maxAngleRotation = me.math.degToRad(-30);
     this.maxAngleRotationDown = me.math.degToRad(35);
-    this.renderable.addAnimation('flying', [0, 1, 2]);
-    this.renderable.addAnimation('idle', [0]);
-    this.renderable.setCurrentAnimation('flying');
-    this.body.removeShapeAt(0);
-    this.body.addShape(new me.Ellipse(5, 5, 71, 51));
+    this.addAnimation('flying', [0, 1, 2]);
+    this.addAnimation('idle', [0]);
+    this.setCurrentAnimation('flying');
 
     // a tween object for the flying physic effect
     this.flyTween = new me.Tween(this.pos);
@@ -52,7 +57,7 @@ game.BirdEntity = class BirdEntity extends me.Entity {
     if (!game.data.start) {
       return super.update(dt);
     }
-    this.renderable.currentTransform.identity();
+    this.currentTransform.identity();
     if (me.input.isKeyPressed('fly')) {
       me.audio.play('wing');
       this.gravityForce = 0.2;
@@ -67,7 +72,7 @@ game.BirdEntity = class BirdEntity extends me.Entity {
       this.angleTween
         .to({ currentAngle: that.maxAngleRotation }, { duration: 50 })
         .onComplete(function () {
-          that.renderable.currentTransform.rotate(that.maxAngleRotation);
+          that.currentTransform.rotate(that.maxAngleRotation);
         });
       this.angleTween.start();
     } else {
@@ -75,11 +80,11 @@ game.BirdEntity = class BirdEntity extends me.Entity {
       this.pos.y += me.timer.tick * this.gravityForce;
       this.currentAngle += me.math.degToRad(3);
       if (this.currentAngle >= this.maxAngleRotationDown) {
-        this.renderable.currentTransform.identity();
+        this.currentTransform.identity();
         this.currentAngle = this.maxAngleRotationDown;
       }
     }
-    this.renderable.currentTransform.rotate(this.currentAngle);
+    this.currentTransform.rotate(this.currentAngle);
     this.updateBounds();
 
     const hitSky = -80; // bird height + 20px
@@ -115,9 +120,9 @@ game.BirdEntity = class BirdEntity extends me.Entity {
     this.endTween.easing(me.Tween.Easing.Exponential.InOut);
 
     this.flyTween.stop();
-    this.renderable.currentTransform.identity();
-    this.renderable.currentTransform.rotate(me.math.degToRad(90));
-    const finalPos = me.game.viewport.height - this.renderable.width / 2 - 96;
+    this.currentTransform.identity();
+    this.currentTransform.rotate(me.math.degToRad(90));
+    const finalPos = me.game.viewport.height - this.width / 2 - 96;
     const dropTween = new me.Tween(this.pos)
       .easing(me.Tween.Easing.Exponential.InOut)
       .to({ y: finalPos }, { duration: 1000 })
@@ -128,7 +133,7 @@ game.BirdEntity = class BirdEntity extends me.Entity {
   }
 };
 
-game.PipeEntity = class PipeEntity extends me.Entity {
+game.PipeEntity = class PipeEntity extends me.Sprite {
   constructor(x, y) {
     const image = me.loader.getImage('pipe');
     const settings = {};
@@ -140,10 +145,12 @@ game.PipeEntity = class PipeEntity extends me.Entity {
 
     super(x, y, settings);
     this.image = image;
-    this.alwaysUpdate = true;
+    this.body = new me.Body(this);
+    this.body.addShape(new me.Rect(0, 0, settings.width, settings.height));
     this.body.gravityScale = 0;
     this.body.collisionType = me.collision.types.WORLD_SHAPE;
     this.body.setCollisionMask(me.collision.types.PLAYER_OBJECT);
+    this.alwaysUpdate = true;
     this.speed = -5;
     this.type = 'pipe';
   }
@@ -180,7 +187,7 @@ game.PipeGenerator = class PipeGenerator extends me.Renderable {
       const pipe2 = me.pool.pull('pipe', this.posX, posY2);
       const hitPos = posY - 100;
       const hit = me.pool.pull('hit', this.posX, hitPos);
-      pipe1.renderable.currentTransform.scaleY(-1);
+      pipe1.currentTransform.scaleY(-1);
       me.game.world.addChild(pipe1, 10);
       me.game.world.addChild(pipe2, 10);
       me.game.world.addChild(hit, 11);
@@ -189,7 +196,7 @@ game.PipeGenerator = class PipeGenerator extends me.Renderable {
   }
 };
 
-game.HitEntity = class HitEntity extends me.Entity {
+game.HitEntity = class HitEntity extends me.Sprite {
   constructor(x, y) {
     const image = me.loader.getImage('hit');
     const settings = {};
@@ -201,15 +208,15 @@ game.HitEntity = class HitEntity extends me.Entity {
 
     super(x, y, settings);
     this.image = image;
-    this.alwaysUpdate = true;
+    this.body = new me.Body(this);
+    this.body.addShape(new me.Rect(0, 0, settings.width - 30, settings.height - 30));
     this.body.gravityScale = 0;
     this.body.collisionType = me.collision.types.ACTION_OBJECT;
     this.body.setCollisionMask(me.collision.types.PLAYER_OBJECT);
+    this.alwaysUpdate = true;
     this.updateTime = false;
-    this.renderable.alpha = 0;
+    this.alpha = 0;
     this.speed = -5;
-    this.body.removeShapeAt(0);
-    this.body.addShape(new me.Rect(0, 0, settings.width - 30, settings.height - 30));
     this.type = 'hit';
   }
 
@@ -224,17 +231,21 @@ game.HitEntity = class HitEntity extends me.Entity {
   }
 };
 
-game.Ground = class Ground extends me.Entity {
+game.Ground = class Ground extends me.Sprite {
   constructor(x, y) {
     const settings = {};
     settings.image = me.loader.getImage('ground');
     settings.width = 900;
     settings.height = 96;
+    settings.framewidth = 900;
+    settings.frameheight = 96;
     super(x, y, settings);
-    this.alwaysUpdate = true;
+    this.body = new me.Body(this);
+    this.body.addShape(new me.Rect(0, 0, settings.width, settings.height));
     this.body.gravityScale = 0;
     this.body.collisionType = me.collision.types.WORLD_SHAPE;
     this.body.setCollisionMask(me.collision.types.PLAYER_OBJECT);
+    this.alwaysUpdate = true;
     this.speed = -4;
     this.type = 'ground';
   }
@@ -242,7 +253,7 @@ game.Ground = class Ground extends me.Entity {
   update(dt) {
     // mechanics
     this.pos.x += this.speed;
-    if (this.pos.x < -this.renderable.width) {
+    if (this.pos.x < -this.width) {
       this.pos.x = me.game.viewport.width - 10;
     }
     this.updateBounds();
