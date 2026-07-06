@@ -7,7 +7,7 @@
 import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { dirname, join, normalize, extname } from 'node:path';
+import { dirname, join, normalize, extname, sep } from 'node:path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DIST = join(__dirname, '..', '..', 'dist');
@@ -65,9 +65,11 @@ const server = createServer(async (req, res) => {
   let rel = pathname.slice(BASE.length); // leading '/'
   if (rel === '/') rel = '/index.html';
 
-  // Prevent path traversal outside dist/.
+  // Prevent path traversal outside dist/. Validate against `${DIST}/` (with a
+  // trailing separator) so a sibling like `dist2/` can't slip past a bare
+  // prefix match.
   const filePath = normalize(join(DIST, rel));
-  if (!filePath.startsWith(DIST)) {
+  if (filePath !== DIST && !filePath.startsWith(DIST + sep)) {
     res.writeHead(403).end('Forbidden');
     return;
   }
