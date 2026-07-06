@@ -9,7 +9,7 @@ module.exports = defineConfig({
   workers: 1,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
-  reporter: process.env.CI ? [['github'], ['list']] : 'list',
+  reporter: process.env.CI ? [['github'], ['list'], ['html', { open: 'never' }]] : 'list',
   expect: {
     // Tight tolerance: absorb font antialiasing only, not real regressions.
     toHaveScreenshot: { maxDiffPixelRatio: 0.02 },
