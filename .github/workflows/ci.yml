@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-e2e:
+    runs-on: ubuntu-latest
+    # Run inside the Playwright image so the browser + font environment matches
+    # the one the golden-master screenshot was captured in (keeps snapshots
+    # deterministic). Keep this tag in lockstep with the @playwright/test version
+    # pinned in package.json.
+    container: mcr.microsoft.com/playwright:v1.61.1-noble
+    env:
+      # Browsers are preinstalled in the container; don't re-download on npm ci.
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+    steps:
+      - uses: actions/checkout@v4
+
+      # Pin the runtime to Node 20 (per modernization plan) over the container's
+      # default Node. Chromium rendering is unaffected by the Node version.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies (from lockfile)
+        run: npm ci
+
+      - name: Build (legacy Grunt toolchain)
+        run: npm run build
+
+      - name: Run Playwright e2e (Playwright starts the static server)
+        run: npm run test:e2e
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

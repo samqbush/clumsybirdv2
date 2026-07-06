@@ -11,6 +11,12 @@ npm-debug.log
 # project specific ignore
 node_modules/
 
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/.playwright/
+
 # Vim swap files
 *.sw*
 

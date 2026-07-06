@@ -81,20 +81,20 @@ passed.
 ## Branching & PRs
 
 Each phase is developed on its **own branch** — never commit phase work directly to
-`master`. Create a branch at the start of a phase (e.g. `phase-0-safety-net`,
+`main`. Create a branch at the start of a phase (e.g. `phase-0-safety-net`,
 `phase-2-melonjs-17`). Once exit criteria are met and recorded, push and open a PR
-to `master`. For **lit** phases (1–3) let **CI on the PR be the authoritative green
+to `main`. For **lit** phases (1–3) let **CI on the PR be the authoritative green
 signal** before merge. For **Phase 0** the PR carries the net + "proven to fail"
 evidence.
 
-**Merge to `master` before the next phase; never stack** (H7). Cut each phase branch
-**from `master`**, and **merge its PR before starting the next phase.** Never base a
+**Merge to `main` before the next phase; never stack** (H7). Cut each phase branch
+**from `main`**, and **merge its PR before starting the next phase.** Never base a
 phase branch/PR on a sibling `phase-N` branch. Before starting a phase, verify the
-previous phase is merged and `git log origin/master..HEAD` is empty at branch
+previous phase is merged and `git log origin/main..HEAD` is empty at branch
 creation.
 
-> **Trunk is `master`** — confirmed: no `main`, `origin/HEAD → master`. There is no
-> legacy default-branch split to guard against.
+> **Trunk is `main`** — confirmed: `origin/HEAD → main`. A stale `master` branch
+> exists one commit behind; do not branch from or target it.
 
 **Keep the executable docs alive with the code (H8).** Any phase that changes
 topology — build/run commands, removed files (`Gruntfile.js`, `js/melonJS-min.js`,
