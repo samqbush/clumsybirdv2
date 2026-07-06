@@ -131,6 +131,20 @@ game.BirdEntity = class BirdEntity extends me.Sprite {
       });
     this.endTween.to({ y: currentPos }, { duration: 1000 }).chain(dropTween).start();
   }
+
+  destroy(...args) {
+    // The bird's collision shape is an me.Ellipse. melonJS v19's Body.destroy()
+    // recycles Point/Line/Polygon shapes into dedicated pools but tries to
+    // me.pool.push() any other shape with throwOnError=true. An Ellipse has no
+    // onResetEvent, so it is never poolable and that push throws
+    // ("me.pool: object ... cannot be recycled"), aborting the PLAY -> GAME_OVER
+    // world reset and freezing the game. Detach the shapes before teardown so
+    // the engine never attempts to recycle the un-poolable Ellipse.
+    if (this.body) {
+      this.body.shapes = [];
+    }
+    return super.destroy(...args);
+  }
 };
 
 game.PipeEntity = class PipeEntity extends me.Sprite {

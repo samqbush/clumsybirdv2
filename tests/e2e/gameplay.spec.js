@@ -64,6 +64,27 @@ test('collision ends the run: PLAY -> GAME_OVER without flapping', async ({ page
   await expect.poll(() => isState(page, 'GAME_OVER'), { timeout: 20000 }).toBe(true);
 });
 
+test('PLAY -> GAME_OVER world reset raises no errors (bird body teardown)', async ({ page }) => {
+  // Regression: on death, the PLAY world resets and destroys the bird. melonJS
+  // v19 Body.destroy() tried to recycle the bird's me.Ellipse collision shape,
+  // which is not poolable, throwing "me.pool: object ... cannot be recycled" and
+  // freezing the game a few seconds into play. Assert the death transition is
+  // error-free, not merely that the state flips (the state flipped even while
+  // the reset threw, which is why the plain collision test missed this).
+  const errors = [];
+  page.on('console', (msg) => {
+    if (msg.type() === 'error' && !/favicon/i.test(msg.text())) errors.push(msg.text());
+  });
+  page.on('pageerror', (err) => errors.push(String(err)));
+
+  await startPlaying(page);
+  await expect.poll(() => isState(page, 'GAME_OVER'), { timeout: 20000 }).toBe(true);
+  // Let the world reset / destroy chain fully settle after the transition.
+  await page.waitForTimeout(500);
+
+  expect(errors, `Unexpected errors during death transition:\n${errors.join('\n')}`).toEqual([]);
+});
+
 test('hi-score persists in localStorage across a full reload', async ({ page }) => {
   await gotoGameAndWaitForMenu(page);
 
