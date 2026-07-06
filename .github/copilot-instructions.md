@@ -19,10 +19,12 @@ a time; do not advance until the current phase's exit criteria are demonstrably 
 
 ## Commands
 
-> As of **Phase 2 (merged)**, the toolchain is **Vite-based** and the game engine is
+> The toolchain is **Vite-based** and the game engine is
 > the **`melonjs@19` npm ESM dependency**, imported via `js/melon.js` (which also
 > publishes `window.me` for the Phase 0 test seam). The legacy Grunt toolchain and
 > the vendored v4 global (`public/vendor/melonjs-min.js`) have both been removed.
+> For per-phase status (planned / in-progress / complete / merged), always defer to
+> `MODERNIZATION_PLAN.md` — this file does not track phase completion.
 
 | Action | Command |
 |--------|---------|
@@ -36,7 +38,7 @@ a time; do not advance until the current phase's exit criteria are demonstrably 
 | Format | `prettier --check .` / `npm run format` |
 | Typecheck | — (no TypeScript) |
 
-> **Verified (Phase 2, Node 24 container / Node 20 CI):** `npm ci` ✅ **0 vulns**,
+> **Verified (Phase 2, Node 24):** `npm ci` ✅ **0 vulns**,
 > `vite build` ✅ green, `eslint .` ✅ 0 errors, `prettier --check .` ✅, Playwright
 > e2e ✅ 5/5 behavioral against the built bundle + golden master re-baselined and
 > green in the CI container (`playwright:v1.61.1-noble`). One residual: a single
@@ -45,7 +47,7 @@ a time; do not advance until the current phase's exit criteria are demonstrably 
 > is deferred.
 
 CI (`.github/workflows/ci.yml`) runs `install → lint → format → build → Playwright
-e2e` on **Node 20** for every push and PR. CI is stood up in **Phase 0** (the
+e2e` on **Node 24** for every push and PR. CI is stood up in **Phase 0** (the
 Testability & CI Milestone). **Enforcement is a separate manual step:** until a
 human turns this workflow into a **required status check / branch-protection rule**
 (GitHub → Settings → Branches), CI *runs* on PRs but does **not** *block* merges.

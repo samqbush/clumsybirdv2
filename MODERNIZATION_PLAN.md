@@ -315,7 +315,7 @@ modules — **still on melonJS v4**, behavior identical.
 
 ---
 
-### Phase 2: melonJS v4 → v19 Upgrade (T-shirt: L) — the risk phase — ✅ COMPLETE 2026-07-06
+### Phase 2: melonJS v4 → v19 Upgrade (T-shirt: L) — the risk phase — ⏳ IN REVIEW (pending human parity play-test + merge)
 
 **Goal:** Replace vendored melonJS v4 with npm melonjs@19 and rewrite the API glue,
 preserving identical observable behavior.
@@ -367,7 +367,7 @@ preserving identical observable behavior.
   no security shim, removal set = just `js/melonJS-min.js` (grepped: referenced only
   `index.html`, now via ESM). **H7/H8** off `main`, docs updated.
 
-#### Verification & Exit Criteria — ✅ MET 2026-07-06 (golden master + e2e green; CI authoritative on PR)
+#### Verification & Exit Criteria — ⏳ MOSTLY MET 2026-07-06 (golden master + e2e green; CI authoritative on PR) — **final gate pending: human parity play-test before merge**
 - [x] App boots on melonjs@19 with **0 console errors** (v4 `textAlign` warnings gone).
       *One* residual: a single one-time `me.Entity` deprecation **warning** (not an
       error) — see residual register. Smoke test (errors-only gate) passes.
