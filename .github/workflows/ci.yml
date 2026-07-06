@@ -41,6 +41,9 @@ jobs:
       - name: Run Playwright e2e (Playwright builds + previews the bundle)
         run: npm run test:e2e
 
+      - name: Run sub-path deployment smoke (built bundle under the Pages sub-path)
+        run: npm run test:e2e:subpath
+
       - name: Upload Playwright report
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4

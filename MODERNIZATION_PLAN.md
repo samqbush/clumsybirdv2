@@ -85,6 +85,7 @@ human enables it, CI *runs* on PRs but does **not** block merges.
 | 35 npm vulns in legacy toolchain | Exposure while Grunt remains | ✅ **Closed in Phase 1** — Grunt removed; `npm audit` reports **0 vulnerabilities** |
 | `me.Entity` deprecation (Phase 2) | 4 entities still extend the deprecated `me.Entity`, emitting one one-time `console.warn` (not an error) | ⏭️ **Deferred** — migrating to `me.Sprite`+`me.Body` is a large, physics-touching change; the golden master + 5 e2e behavioral tests are green, so it is a post-Phase-2 clean-up item |
 | Golden master re-baselined at v19 (Phase 2) | New snapshot pins v19 rendering, not v4 | Justified: a 15-major engine upgrade changes the renderer; re-captured in the CI container and reviewed; behavior tests independently green |
+| Pages sub-path breaks asset loading (Phase 3) | Relative `base: './'` + `public/` fonts could 404 under `/clumsybirdv2/` | ✅ **Closed in Phase 3** — fonts moved into the Vite asset graph (rebased relative), CSS de-inlined, and an automated sub-path smoke (`test:e2e:subpath`) asserts 0 failed requests + font load + trailing-slash redirect against the built bundle |
 
 ## 4. Target Architecture
 
@@ -385,7 +386,7 @@ preserving identical observable behavior.
 
 ---
 
-### Phase 3: Deployment Modernization (T-shirt: S)
+### Phase 3: Deployment Modernization (T-shirt: S) — ⏳ IN REVIEW (pending human live-URL check after first Pages deploy)
 
 **Goal:** Retire the dead Python-2 Heroku path; deploy via GitHub Actions to Pages.
 **Regime:** **lit.** **Safety rung:** L4.
@@ -411,10 +412,34 @@ preserving identical observable behavior.
   CUSTOMIZING updated same PR. **H1** grep `Procfile`/`app.json`/Heroku refs =
   removal set. **H5** the built asset deploy carries no stateful store.
 
+#### Implementation notes (as built)
+- **`vite.config.js`:** `base: './'` (relative — no hardcoded repo name) **plus
+  `build.assetsInlineLimit: 0`**. Inlining had turned `index.css` into a base64
+  `data:` URI whose `@font-face url('/data/css/gamefont.*')` stayed root-absolute
+  and would 404 under the sub-path; disabling inlining emits a real `assets/*.css`.
+- **Font moved into the Vite asset graph:** `public/data/css/gamefont.*` →
+  `fonts/gamefont.*`, referenced from `index.css` as `./fonts/gamefont.*`, and
+  `index.css` is now imported from `js/main.js` (the `<link>` in `index.html` was
+  removed). Vite only rebases `url()` for graph assets, not `public/` files, so
+  this is what makes the fingerprinted font resolve relative under Pages.
+- **Sub-path smoke:** `playwright.subpath.config.js` + `tests/subpath/` serve the
+  built `dist/` under `/clumsybirdv2/` via a zero-dep static server
+  (`tests/subpath/serve.mjs`) and assert boot with **0 failed asset requests /
+  non-2xx / console errors**, the **gamefont loads**, and the **trailing-slash
+  redirect**. Run with `npm run test:e2e:subpath`. This is the gate the root-served
+  net cannot provide.
+- **`deploy.yml`:** push to `main` + `workflow_dispatch`; `build` job (Playwright
+  container, Node 24) runs `test:e2e` then `test:e2e:subpath`, then
+  `upload-pages-artifact` (`dist/`); `deploy` job (ubuntu-latest) runs
+  `deploy-pages`. Enabling Pages (Settings → Pages → Source: GitHub Actions) is the
+  one remaining manual human step.
+
 #### Verification & Exit Criteria
-- [ ] `deploy.yml` publishes `dist/` to Pages; live URL loads with 0 console errors.
-- [ ] e2e smoke green against the **built** bundle at the Pages base path.
-- [ ] `Procfile` + Heroku button removed; README/CUSTOMIZING reflect Pages/Vite.
+- [x] e2e smoke green against the **built** bundle at the Pages base path
+  (`test:e2e:subpath` — 3/3; root `test:e2e` — 5/5).
+- [x] `Procfile` + `app.json` + Heroku button removed; README reflects Pages/Vite.
+- [ ] `deploy.yml` publishes `dist/` to Pages; live URL loads with 0 console errors
+  (**manual** — verify after enabling Pages + first deploy).
 
 ---
 
