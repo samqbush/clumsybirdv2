@@ -20,11 +20,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Pin the runtime to Node 20 (per modernization plan) over the container's
-      # default Node. Chromium rendering is unaffected by the Node version.
+      # Pin the runtime to Node 24 (melonjs@19 requires engines.node >=24) over the
+      # container's default Node. Chromium rendering is unaffected by the Node version.
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
 
       - name: Install dependencies (from lockfile)
         run: npm ci

@@ -1,3 +1,5 @@
+import { me } from './melon.js';
+
 export const game = {
   data: {
     score: 0,
@@ -29,9 +31,11 @@ export const game = {
   ],
 
   onload: function () {
+    // v19: `parent` replaces the v4 `wrapper` option; me.video.init still
+    // creates the default Application (me.game) and returns false on failure.
     if (
       !me.video.init(900, 600, {
-        wrapper: 'screen',
+        parent: 'screen',
         scale: 'auto',
         scaleMethod: 'fit',
       })
@@ -40,7 +44,7 @@ export const game = {
       return;
     }
     me.audio.init('mp3,ogg');
-    me.loader.preload(game.resources, this.loaded.bind(this));
+    me.loader.preload(game.resources, () => this.loaded());
   },
 
   loaded: function () {

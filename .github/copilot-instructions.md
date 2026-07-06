@@ -12,16 +12,19 @@ Chromium), it simply has **no tests** and a **dead build toolchain**. So we use
 Milestone is Phase 0** (where the Playwright behavioral net + CI go up), so
 **Phases 1–3 are all post-testability ("lit")**. The safety oracle is the
 **running game** (a self-frozen golden-master screenshot + e2e assertions), pinned
-at the behavioral seams that survive the melonJS v4→v17 rewrite. Target rung
+at the behavioral seams that survive the melonJS v4→v19 rewrite. Target rung
 **L4**. See `MODERNIZATION_PLAN.md` for the roadmap, CI Milestone, and residual-
 risk register; `ARCHITECTURE.md` for the audited current state. Work one phase at
 a time; do not advance until the current phase's exit criteria are demonstrably met.
 
 ## Commands
 
-> As of **Phase 1 (merged)**, the toolchain is **Vite-based**; the legacy Grunt
-> toolchain has been removed. Commands below are the current (Vite) regime. melonJS
-> v4 is still a vendored global (`public/vendor/melonjs-min.js`) until Phase 2.
+> The toolchain is **Vite-based** and the game engine is
+> the **`melonjs@19` npm ESM dependency**, imported via `js/melon.js` (which also
+> publishes `window.me` for the Phase 0 test seam). The legacy Grunt toolchain and
+> the vendored v4 global (`public/vendor/melonjs-min.js`) have both been removed.
+> For per-phase status (planned / in-progress / complete / merged), always defer to
+> `MODERNIZATION_PLAN.md` — this file does not track phase completion.
 
 | Action | Command |
 |--------|---------|
@@ -35,13 +38,16 @@ a time; do not advance until the current phase's exit criteria are demonstrably 
 | Format | `prettier --check .` / `npm run format` |
 | Typecheck | — (no TypeScript) |
 
-> **Verified (Phase 1, Node 25 local / Node 20 CI):** `npm install` ✅ **0 vulns**
-> (Grunt's 35 vulns closed), `vite build` ✅ green, `eslint .` ✅ 0 errors,
-> `prettier --check .` ✅, Playwright e2e ✅ 5/5 behavioral against the built bundle
-> (golden master enforced on Linux/CI).
+> **Verified (Phase 2, Node 24):** `npm ci` ✅ **0 vulns**,
+> `vite build` ✅ green, `eslint .` ✅ 0 errors, `prettier --check .` ✅, Playwright
+> e2e ✅ 5/5 behavioral against the built bundle + golden master re-baselined and
+> green in the CI container (`playwright:v1.61.1-noble`). One residual: a single
+> one-time `me.Entity` deprecation **warning** (not an error) — the four entities
+> still extend the deprecated `me.Entity`; migrating them to `me.Sprite`+`me.Body`
+> is deferred.
 
 CI (`.github/workflows/ci.yml`) runs `install → lint → format → build → Playwright
-e2e` on **Node 20** for every push and PR. CI is stood up in **Phase 0** (the
+e2e` on **Node 24** for every push and PR. CI is stood up in **Phase 0** (the
 Testability & CI Milestone). **Enforcement is a separate manual step:** until a
 human turns this workflow into a **required status check / branch-protection rule**
 (GitHub → Settings → Branches), CI *runs* on PRs but does **not** *block* merges.
@@ -84,7 +90,7 @@ passed.
 
 Each phase is developed on its **own branch** — never commit phase work directly to
 `main`. Create a branch at the start of a phase (e.g. `phase-0-safety-net`,
-`phase-2-melonjs-17`). Once exit criteria are met and recorded, push and open a PR
+`phase-2-melonjs-19`). Once exit criteria are met and recorded, push and open a PR
 to `main`. For **lit** phases (1–3) let **CI on the PR be the authoritative green
 signal** before merge. For **Phase 0** the PR carries the net + "proven to fail"
 evidence.

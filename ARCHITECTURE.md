@@ -4,6 +4,15 @@
 > line where useful). Facts marked **[verified]** were confirmed by running the
 > command/probe during the feasibility spike (2026-07-06, Node v25.8.2, npm 11.11.1,
 > Chromium via playwright-cli).
+>
+> **⚠️ Post-Phase-2 note (2026-07-06):** the tables below describe the *pre-*
+> modernization baseline. As of **Phase 2**, the vendored **melonJS v4** global and
+> the Grunt/JSHint toolchain are **gone**: the engine is now the **`melonjs@19` npm
+> ESM dependency** imported via `js/melon.js`, the entities/screens are ES6 classes
+> (no `me.*.extend`/`_super`), text uses `me.Text` (not `me.Font`), and collision is
+> the v19 automatic `onCollision(response, other)` hook (not `me.collision.check`).
+> Build = Vite, lint = ESLint, tests = Playwright e2e. See `MODERNIZATION_PLAN.md`
+> Phase 1–2 for the current state.
 
 ## 1. Overview
 

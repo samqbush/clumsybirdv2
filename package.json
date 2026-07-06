@@ -22,9 +22,11 @@
   },
   "type": "module",
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
-  "dependencies": {},
+  "dependencies": {
+    "melonjs": "^19.8.0"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
