@@ -30,7 +30,17 @@ game.BirdEntity = class BirdEntity extends me.Sprite {
     // gap off the top of the screen and made the game unwinnable.
     this.anchorPoint.set(0, 0);
     this.body = new me.Body(this);
-    this.body.addShape(new me.Ellipse(5, 5, 71, 51));
+    // melonJS v19's me.Ellipse(x, y, w, h) takes x,y as the ELLIPSE CENTER,
+    // whereas the v4 original treated them as the shape's top-left corner. The
+    // v4 code `new me.Ellipse(5, 5, 71, 51)` meant a 71x51 ellipse inset 5px
+    // from the bird's top-left; ported verbatim it instead CENTERED the hitbox
+    // at (5,5), shoving the collision zone ~30px left and ~20px above the sprite
+    // (half of it off the bird). The visible bird then flew clean through a gap
+    // while its offset hitbox clipped the pipe/ceiling — "die no matter what
+    // going through the pipe". Pass the intended CENTER = top-left + half-size.
+    const hbW = 71;
+    const hbH = 51;
+    this.body.addShape(new me.Ellipse(5 + hbW / 2, 5 + hbH / 2, hbW, hbH));
     this.body.gravityScale = 0;
     this.body.collisionType = me.collision.types.PLAYER_OBJECT;
     this.body.setCollisionMask(me.collision.types.ALL_OBJECT);
