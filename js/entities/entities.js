@@ -30,7 +30,17 @@ game.BirdEntity = class BirdEntity extends me.Sprite {
     // gap off the top of the screen and made the game unwinnable.
     this.anchorPoint.set(0, 0);
     this.body = new me.Body(this);
-    this.body.addShape(new me.Ellipse(5, 5, 71, 51));
+    // melonJS v19's me.Ellipse(x, y, w, h) takes x,y as the ELLIPSE CENTER,
+    // whereas the v4 original treated them as the shape's top-left corner. The
+    // v4 code `new me.Ellipse(5, 5, 71, 51)` meant a 71x51 ellipse inset 5px
+    // from the bird's top-left; ported verbatim it instead CENTERED the hitbox
+    // at (5,5), shoving the collision zone ~30px left and ~20px above the sprite
+    // (half of it off the bird). The visible bird then flew clean through a gap
+    // while its offset hitbox clipped the pipe/ceiling — "die no matter what
+    // going through the pipe". Pass the intended CENTER = top-left + half-size.
+    const hbW = 71;
+    const hbH = 51;
+    this.body.addShape(new me.Ellipse(5 + hbW / 2, 5 + hbH / 2, hbW, hbH));
     this.body.gravityScale = 0;
     this.body.collisionType = me.collision.types.PLAYER_OBJECT;
     this.body.setCollisionMask(me.collision.types.ALL_OBJECT);
@@ -110,9 +120,19 @@ game.BirdEntity = class BirdEntity extends me.Sprite {
       me.device.vibrate(500);
       this.collided = true;
     }
-    // remove the hit box
-    if (obj.type === 'hit') {
-      me.game.world.removeChildNow(obj);
+    // score + remove the invisible hit box. onCollision fires INSIDE melonJS
+    // v19's live collision loop, which reads `other.body.isStatic` again right
+    // after this handler returns. removeChildNow() is immediate: it destroys the
+    // hit and nulls its .body synchronously, so that later read crashed with
+    // "Cannot read properties of undefined (reading 'isStatic')" the moment the
+    // bird reached the first pipe. Use the DEFERRED removeChild(), which melonJS
+    // runs after the update/draw stack settles, so the body stays valid for the
+    // rest of this frame's collision pass. The `scored` guard makes scoring
+    // one-shot, since the hit now survives the extra frame(s) until the deferred
+    // removal runs and could otherwise re-enter this handler.
+    if (obj.type === 'hit' && !obj.scored) {
+      obj.scored = true;
+      me.game.world.removeChild(obj);
       game.data.steps++;
       me.audio.play('hit');
     }
@@ -241,6 +261,10 @@ game.HitEntity = class HitEntity extends me.Sprite {
     this.body = new me.Body(this);
     this.body.addShape(new me.Rect(0, 0, settings.width - 30, settings.height - 30));
     this.body.gravityScale = 0;
+    // The hit box is a pure score trigger: mark it a sensor so v19's solver
+    // never tries to push-out (respondToCollision) the invisible entity while it
+    // waits to be removed. Collision detection (onCollision) still fires.
+    this.body.setSensor(true);
     this.body.collisionType = me.collision.types.ACTION_OBJECT;
     this.body.setCollisionMask(me.collision.types.PLAYER_OBJECT);
     this.alwaysUpdate = true;
@@ -248,6 +272,11 @@ game.HitEntity = class HitEntity extends me.Sprite {
     this.alpha = 0;
     this.speed = -5;
     this.type = 'hit';
+    // one-shot scoring guard (see BirdEntity.onCollision). Set per fresh
+    // instance. HitEntity is registered without recycling and has no
+    // onResetEvent, so me.pool never returns it to the pool: every
+    // me.pool.pull('hit') constructs a new instance with scored === false.
+    this.scored = false;
   }
 
   update(dt) {

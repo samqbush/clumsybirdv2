@@ -34,26 +34,56 @@ test('SPACE on the title screen transitions MENU -> PLAY', async ({ page }) => {
 test('score (steps) increments when the bird passes a pipe hit-box', async ({ page }) => {
   await startPlaying(page);
 
+  // Capture any runtime error BEFORE inducing the collision. Regression: the
+  // real crash was "Cannot read properties of undefined (reading 'isStatic')"
+  // thrown from INSIDE melonJS's live collision loop when the bird's onCollision
+  // removed the hit with removeChildNow (nulling its body mid-loop). Calling
+  // bird.onCollision(...) directly (as this test used to) never runs the engine
+  // loop, so it stayed green while the shipped game crashed at the first pipe.
+  const errors = [];
+  page.on('console', (msg) => {
+    if (msg.type() === 'error' && !/favicon/i.test(msg.text())) errors.push(msg.text());
+  });
+  page.on('pageerror', (err) => errors.push(String(err)));
+
   const before = await page.evaluate(() => window.game.data.steps);
 
-  // Drive the REAL scoring path: spawn a real "hit" entity (the invisible
-  // in-gap trigger) onto the live bird and invoke the bird's real onCollision
-  // handler, exactly as the collision system would. The ++ is computed by game
-  // code (entities.js onCollision, type === 'hit'), not by the test.
+  // Drive the REAL scoring path via the REAL collision engine: spawn a real
+  // "hit" trigger overlapping the live bird and let melonJS's own physics/
+  // collision step dispatch onCollision (never call it directly). The ++ is
+  // computed by game code (entities.js onCollision, type === 'hit').
   const ok = await page.evaluate(() => {
     const world = window.me.game.world;
     const bird = world.children.find((c) => c instanceof window.game.BirdEntity);
     if (!bird) return false;
     const hit = window.me.pool.pull('hit', bird.pos.x, bird.pos.y);
     world.addChild(hit, 11);
-    bird.onCollision({ b: hit }, hit);
     return true;
   });
   expect(ok).toBe(true);
 
+  // The engine's collision pass runs on each frame; poll until the real code
+  // path has scored. If the isStatic crash regressed, the loop throws instead.
   await expect
     .poll(() => page.evaluate(() => window.game.data.steps), { timeout: 5000 })
     .toBe(before + 1);
+
+  // The mid-loop teardown must not have raised any error.
+  expect(errors, `Unexpected errors while scoring a pipe:\n${errors.join('\n')}`).toEqual([]);
+
+  // Scoring is one-shot and the deferred removeChild eventually detaches the hit.
+  await expect
+    .poll(
+      () =>
+        page.evaluate(
+          () =>
+            window.me.game.world.children.filter((c) => c instanceof window.game.HitEntity).length,
+        ),
+      { timeout: 5000 },
+    )
+    .toBe(0);
+  const after = await page.evaluate(() => window.game.data.steps);
+  expect(after).toBe(before + 1);
 });
 
 test('collision ends the run: PLAY -> GAME_OVER without flapping', async ({ page }) => {
@@ -213,4 +243,69 @@ test('a spawned pipe pair leaves a passable, on-screen gap (unwinnable-wall regr
 
   // 5) Exactly one pipe of the pair is flipped (the bottom one, cap pointing up).
   expect(pair.filter((p) => p.flipY).length).toBe(1);
+});
+
+// Regression: the bird's collision body must line up with its VISIBLE sprite.
+// melonJS v19's `me.Ellipse(x, y, w, h)` takes x,y as the ellipse CENTER, but
+// the v4 original treated them as the top-left corner. The bird's shape was
+// ported verbatim as `new me.Ellipse(5, 5, 71, 51)`, which under v19 centered
+// the hitbox at (5,5) — shoving the collision zone ~30px left and ~20px above
+// the sprite, half of it off the bird. Visually the bird flew clean through a
+// gap while its offset hitbox clipped the pipe/ceiling: "die no matter what
+// going through the pipe". This asserts the body's world-space bounds sit
+// snugly INSIDE the sprite's render bounds (a small inset, never poking out),
+// which fails with the mis-centered ellipse and passes once it is centered on
+// the bird. Note: an Ellipse's getBounds() is already expressed about the
+// entity position (pos ± radius), so world extent is pos + shape.getBounds()
+// (do NOT also add shape.pos — that double-counts the center).
+test('the bird collision body is aligned with its visible sprite (hitbox-offset regression)', async ({
+  page,
+}) => {
+  await startPlaying(page);
+
+  const b = await page.evaluate(() => {
+    const world = window.me.game.world;
+    const bird = world.children.find((c) => c instanceof window.game.BirdEntity);
+    if (!bird) return null;
+    const r = bird.getBounds(); // visible sprite bounds (anchorPoint 0,0)
+    const shp = bird.body.shapes[0];
+    const sb = shp.getBounds();
+    const body = {
+      left: bird.pos.x + sb.x,
+      right: bird.pos.x + sb.x + sb.width,
+      top: bird.pos.y + sb.y,
+      bottom: bird.pos.y + sb.y + sb.height,
+    };
+    return {
+      render: { left: r.x, right: r.x + r.width, top: r.y, bottom: r.y + r.height },
+      body,
+      shapeType: shp.type,
+    };
+  });
+
+  expect(b, 'expected a bird in the world').toBeTruthy();
+  expect(b.shapeType).toBe('Ellipse');
+
+  // The hitbox must stay within the sprite (with a small tolerance), i.e. it may
+  // be inset but must not extend meaningfully past any edge of the visible bird.
+  const TOL = 2;
+  expect(b.body.left).toBeGreaterThanOrEqual(b.render.left - TOL);
+  expect(b.body.right).toBeLessThanOrEqual(b.render.right + TOL);
+  expect(b.body.top).toBeGreaterThanOrEqual(b.render.top - TOL);
+  expect(b.body.bottom).toBeLessThanOrEqual(b.render.bottom + TOL);
+
+  // And it must actually cover the bird — a body that collapsed or drifted far
+  // off-center would still pass the "inside" check, so require substantial
+  // overlap on both axes (the hitbox spans most of the sprite).
+  const renderW = b.render.right - b.render.left;
+  const renderH = b.render.bottom - b.render.top;
+  expect(b.body.right - b.body.left).toBeGreaterThan(renderW * 0.6);
+  expect(b.body.bottom - b.body.top).toBeGreaterThan(renderH * 0.6);
+  // The hitbox center is near the sprite center (not shoved to a corner).
+  const bodyCx = (b.body.left + b.body.right) / 2;
+  const bodyCy = (b.body.top + b.body.bottom) / 2;
+  const rCx = (b.render.left + b.render.right) / 2;
+  const rCy = (b.render.top + b.render.bottom) / 2;
+  expect(Math.abs(bodyCx - rCx)).toBeLessThan(renderW * 0.2);
+  expect(Math.abs(bodyCy - rCy)).toBeLessThan(renderH * 0.2);
 });
