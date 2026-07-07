@@ -110,9 +110,19 @@ game.BirdEntity = class BirdEntity extends me.Sprite {
       me.device.vibrate(500);
       this.collided = true;
     }
-    // remove the hit box
-    if (obj.type === 'hit') {
-      me.game.world.removeChildNow(obj);
+    // score + remove the invisible hit box. onCollision fires INSIDE melonJS
+    // v19's live collision loop, which reads `other.body.isStatic` again right
+    // after this handler returns. removeChildNow() is immediate: it destroys the
+    // hit and nulls its .body synchronously, so that later read crashed with
+    // "Cannot read properties of undefined (reading 'isStatic')" the moment the
+    // bird reached the first pipe. Use the DEFERRED removeChild(), which melonJS
+    // runs after the update/draw stack settles, so the body stays valid for the
+    // rest of this frame's collision pass. The `scored` guard makes scoring
+    // one-shot, since the hit now survives the extra frame(s) until the deferred
+    // removal runs and could otherwise re-enter this handler.
+    if (obj.type === 'hit' && !obj.scored) {
+      obj.scored = true;
+      me.game.world.removeChild(obj);
       game.data.steps++;
       me.audio.play('hit');
     }
@@ -241,6 +251,10 @@ game.HitEntity = class HitEntity extends me.Sprite {
     this.body = new me.Body(this);
     this.body.addShape(new me.Rect(0, 0, settings.width - 30, settings.height - 30));
     this.body.gravityScale = 0;
+    // The hit box is a pure score trigger: mark it a sensor so v19's solver
+    // never tries to push-out (respondToCollision) the invisible entity while it
+    // waits to be removed. Collision detection (onCollision) still fires.
+    this.body.setSensor(true);
     this.body.collisionType = me.collision.types.ACTION_OBJECT;
     this.body.setCollisionMask(me.collision.types.PLAYER_OBJECT);
     this.alwaysUpdate = true;
@@ -248,6 +262,10 @@ game.HitEntity = class HitEntity extends me.Sprite {
     this.alpha = 0;
     this.speed = -5;
     this.type = 'hit';
+    // one-shot scoring guard (see BirdEntity.onCollision). Set per fresh
+    // instance; HitEntity is not pool-recycled (no onResetEvent), so it is
+    // constructed anew on every me.pool.pull.
+    this.scored = false;
   }
 
   update(dt) {

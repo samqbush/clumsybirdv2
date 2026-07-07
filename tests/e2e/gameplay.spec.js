@@ -34,26 +34,56 @@ test('SPACE on the title screen transitions MENU -> PLAY', async ({ page }) => {
 test('score (steps) increments when the bird passes a pipe hit-box', async ({ page }) => {
   await startPlaying(page);
 
+  // Capture any runtime error BEFORE inducing the collision. Regression: the
+  // real crash was "Cannot read properties of undefined (reading 'isStatic')"
+  // thrown from INSIDE melonJS's live collision loop when the bird's onCollision
+  // removed the hit with removeChildNow (nulling its body mid-loop). Calling
+  // bird.onCollision(...) directly (as this test used to) never runs the engine
+  // loop, so it stayed green while the shipped game crashed at the first pipe.
+  const errors = [];
+  page.on('console', (msg) => {
+    if (msg.type() === 'error' && !/favicon/i.test(msg.text())) errors.push(msg.text());
+  });
+  page.on('pageerror', (err) => errors.push(String(err)));
+
   const before = await page.evaluate(() => window.game.data.steps);
 
-  // Drive the REAL scoring path: spawn a real "hit" entity (the invisible
-  // in-gap trigger) onto the live bird and invoke the bird's real onCollision
-  // handler, exactly as the collision system would. The ++ is computed by game
-  // code (entities.js onCollision, type === 'hit'), not by the test.
+  // Drive the REAL scoring path via the REAL collision engine: spawn a real
+  // "hit" trigger overlapping the live bird and let melonJS's own physics/
+  // collision step dispatch onCollision (never call it directly). The ++ is
+  // computed by game code (entities.js onCollision, type === 'hit').
   const ok = await page.evaluate(() => {
     const world = window.me.game.world;
     const bird = world.children.find((c) => c instanceof window.game.BirdEntity);
     if (!bird) return false;
     const hit = window.me.pool.pull('hit', bird.pos.x, bird.pos.y);
     world.addChild(hit, 11);
-    bird.onCollision({ b: hit }, hit);
     return true;
   });
   expect(ok).toBe(true);
 
+  // The engine's collision pass runs on each frame; poll until the real code
+  // path has scored. If the isStatic crash regressed, the loop throws instead.
   await expect
     .poll(() => page.evaluate(() => window.game.data.steps), { timeout: 5000 })
     .toBe(before + 1);
+
+  // The mid-loop teardown must not have raised any error.
+  expect(errors, `Unexpected errors while scoring a pipe:\n${errors.join('\n')}`).toEqual([]);
+
+  // Scoring is one-shot and the deferred removeChild eventually detaches the hit.
+  await expect
+    .poll(
+      () =>
+        page.evaluate(
+          () =>
+            window.me.game.world.children.filter((c) => c instanceof window.game.HitEntity).length,
+        ),
+      { timeout: 5000 },
+    )
+    .toBe(0);
+  const after = await page.evaluate(() => window.game.data.steps);
+  expect(after).toBe(before + 1);
 });
 
 test('collision ends the run: PLAY -> GAME_OVER without flapping', async ({ page }) => {
