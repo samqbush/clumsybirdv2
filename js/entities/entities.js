@@ -263,8 +263,9 @@ game.HitEntity = class HitEntity extends me.Sprite {
     this.speed = -5;
     this.type = 'hit';
     // one-shot scoring guard (see BirdEntity.onCollision). Set per fresh
-    // instance; HitEntity is not pool-recycled (no onResetEvent), so it is
-    // constructed anew on every me.pool.pull.
+    // instance. HitEntity is registered without recycling and has no
+    // onResetEvent, so me.pool never returns it to the pool: every
+    // me.pool.pull('hit') constructs a new instance with scored === false.
     this.scored = false;
   }
 

@@ -58,7 +58,7 @@ export const game = {
 
     me.pool.register('clumsy', game.BirdEntity);
     me.pool.register('pipe', game.PipeEntity, true);
-    me.pool.register('hit', game.HitEntity, true);
+    me.pool.register('hit', game.HitEntity);
     me.pool.register('ground', game.Ground, true);
 
     me.state.change(me.state.MENU);
